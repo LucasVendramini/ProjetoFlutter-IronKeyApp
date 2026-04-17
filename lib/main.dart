@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:ironkey/app_theme.dart';
+import 'package:ironkey/models/password_complexity.dart';
 import 'package:ironkey/password_generator.dart';
 import 'package:ironkey/password_type_enum.dart';
 import 'package:ironkey/pin_password_generator.dart';
@@ -40,7 +41,14 @@ class _IronKeyScreenState extends State<IronKeyScreen> {
   int maxCharacters = 12;
   bool isEditable = false;
 
+  bool includeUpperCase = true;
+  bool includeLowerCase = true;
+  bool includeNumbers = true;
+  bool includeSymbols = false;
+
   PasswordTypeEnum passwordTypeSelected = PasswordTypeEnum.pin;
+
+  PasswordComplexity selectedComplexity = PasswordComplexity.medium;
 
   @override
   void initState() {
@@ -71,7 +79,12 @@ class _IronKeyScreenState extends State<IronKeyScreen> {
         generator = PinPasswordGenerator();
         break;
       case PasswordTypeEnum.standart:
-        generator = StandardPasswordGenerator();
+        generator = StandardPasswordGenerator(
+          includeLowercase: includeLowerCase,
+          includeUppercase: includeUpperCase,
+          includeNumbers: includeNumbers,
+          includeSymbols: includeSymbols,
+        );
         break;
     }
 
@@ -92,107 +105,211 @@ class _IronKeyScreenState extends State<IronKeyScreen> {
           child: Column(
             children: [
               Expanded(
-                child: Column(
-                  children: [
-                    ClipOval(
-                      child: SizedBox(
-                        width: 150,
-                        height: 150,
-                        child: Image.asset(
-                          "assets/images/ironman.jpg",
-                          fit: BoxFit.cover,
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      ClipOval(
+                        child: SizedBox(
+                          width: 150,
+                          height: 150,
+                          child: Image.asset(
+                            "assets/images/ironman.jpg",
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      "Sua senha segura",
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
+                      SizedBox(height: 16),
+                      Text(
+                        "Sua senha segura",
+                        textAlign: TextAlign.center,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 24,
+                        ),
                       ),
-                    ),
-                    SizedBox(height: 16),
-                    TextField(
-                      enabled: isEditable,
-                      controller: _passwordController,
-                      maxLength: maxCharacters,
-                      decoration: InputDecoration(
-                        labelText: "Password",
-                        border: OutlineInputBorder(),
-                        prefixIcon: Icon(Icons.lock),
-                        suffixIcon: _passwordController.text.isNotEmpty
-                            ? IconButton(
-                                onPressed: () {
-                                  copyPassword(_passwordController.text);
-                                },
-                                icon: Icon(Icons.copy),
-                              )
-                            : null,
+                      SizedBox(height: 16),
+                      TextField(
+                        enabled: isEditable,
+                        controller: _passwordController,
+                        maxLength: maxCharacters,
+                        decoration: InputDecoration(
+                          labelText: "Password",
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.lock),
+                          suffixIcon: _passwordController.text.isNotEmpty
+                              ? IconButton(
+                                  onPressed: () {
+                                    copyPassword(_passwordController.text);
+                                  },
+                                  icon: Icon(Icons.copy),
+                                )
+                              : null,
+                        ),
                       ),
-                    ),
 
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text("Tipo de senha"),
-                    ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text("Tipo de senha"),
+                      ),
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: RadioListTile(
-                            value: PasswordTypeEnum.pin,
-                            groupValue: passwordTypeSelected,
-                            title: Text("PIN"),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile(
+                              value: PasswordTypeEnum.pin,
+                              groupValue: passwordTypeSelected,
+                              title: Text("PIN"),
+                              onChanged: (value) {
+                                setState(() {
+                                  passwordTypeSelected = value!;
+                                });
+                              },
+                            ),
+                          ),
+
+                          Expanded(
+                            child: RadioListTile(
+                              value: PasswordTypeEnum.standart,
+                              groupValue: passwordTypeSelected,
+                              title: Text("Padrão"),
+                              onChanged: (value) {
+                                setState(() {
+                                  passwordTypeSelected = value!;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      Divider(color: colorScheme.outline),
+
+                      Row(
+                        children: [
+                          Icon(isEditable ? Icons.lock_open : Icons.lock),
+                          SizedBox(width: 8),
+                          Expanded(child: Text("Permite editar a senha?")),
+                          Switch(
+                            value: isEditable,
                             onChanged: (value) {
                               setState(() {
-                                passwordTypeSelected = value!;
+                                isEditable = value;
                               });
                             },
                           ),
-                        ),
+                        ],
+                      ),
 
-                        Expanded(
-                          child: RadioListTile(
-                            value: PasswordTypeEnum.standart,
-                            groupValue: passwordTypeSelected,
-                            title: Text("Padrão"),
-                            onChanged: (value) {
-                              setState(() {
-                                passwordTypeSelected = value!;
-                              });
-                            },
+                      Divider(color: colorScheme.outline),
+                      SizedBox(height: 20),
+
+                      if (isEditable) ...[
+                        const SizedBox(height: 20),
+                        DropdownButtonFormField<PasswordComplexity>(
+                          value: selectedComplexity,
+                          isExpanded: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Complexidade da senha',
+                            border: OutlineInputBorder(),
                           ),
-                        ),
-                      ],
-                    ),
-
-                    Divider(color: colorScheme.outline),
-
-                    Row(
-                      children: [
-                        Icon(isEditable ? Icons.lock_open : Icons.lock),
-                        SizedBox(width: 8),
-                        Expanded(child: Text("Permite editar a senha?")),
-                        Switch(
-                          value: isEditable,
+                          items: PasswordComplexity.values.map((complexity) {
+                            return DropdownMenuItem(
+                              value: complexity,
+                              child: Text(complexity.title),
+                            );
+                          }).toList(),
                           onChanged: (value) {
                             setState(() {
-                              isEditable = value;
+                              selectedComplexity = value!;
+                              maxCharacters = selectedComplexity.length;
                             });
                           },
                         ),
+                        SizedBox(height: 16),
+
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text("Tamanho da senha: $maxCharacters"),
+                        ),
+                        Slider(
+                          value: maxCharacters.toDouble(),
+                          min: 4,
+                          max: 12,
+                          onChanged: (value) {
+                            setState(() {
+                              maxCharacters = value.toInt();
+                            });
+                          },
+                        ),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: CheckboxListTile(
+                                title: Text("Maiúsculas"),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                value: includeUpperCase,
+                                onChanged: (value) {
+                                  setState(() {
+                                    includeUpperCase = value ?? false;
+                                  });
+                                },
+                              ),
+                            ),
+
+                            Expanded(
+                              child: CheckboxListTile(
+                                title: Text("Minúsculas"),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                value: includeLowerCase,
+                                onChanged: (value) {
+                                  setState(() {
+                                    includeLowerCase = value ?? false;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: CheckboxListTile(
+                                title: Text("Números"),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                value: includeNumbers,
+                                onChanged: (value) {
+                                  setState(() {
+                                    includeNumbers = value ?? false;
+                                  });
+                                },
+                              ),
+                            ),
+
+                            Expanded(
+                              child: CheckboxListTile(
+                                title: Text("Símbolos"),
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                value: includeSymbols,
+                                onChanged: (value) {
+                                  setState(() {
+                                    includeSymbols = value ?? false;
+                                  });
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
                       ],
-                    ),
-
-                    Divider(color: colorScheme.outline),
-                    SizedBox(height: 20),
-
-                    if (isEditable) Text("Estou no modo de edição"),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               SizedBox(
